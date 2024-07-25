@@ -3,7 +3,7 @@
 # This works for next.js projects currently
 # Put this in your root folder of your project
 # run the command chmod +x get_code_context.sh
-# then run ./get_code_context.sh
+# then run ./code_context.sh
 
 # Enable debugging
 set -x
