@@ -9,7 +9,7 @@ This is a script to get the word count
 ## RUN scripts
 
 ```bash
-./get_code_context.sh
+./code_context.sh
 ```
 
 ```bash
