@@ -19,38 +19,45 @@ if [ -f "$output_file" ]; then
   rm "$output_file"
 fi
 
-# Check if src directory exists
-if [ ! -d "${project_dir}/src" ]; then
-  echo "Error: src directory not found in ${project_dir}"
-  exit 1
-fi
-
-# Get all directories in src
-all_directories=($(find src -maxdepth 1 -type d -not -name "src" -printf "%P\n"))
+# Get all directories in src and other specified directories
+src_directories=($(find src -maxdepth 1 -type d -not -name "src" -printf "src/%P\n" 2>/dev/null))
+root_directories=()
+for dir in "public" "posts" "lancement" "lancements"; do
+    if [ -d "$project_dir/$dir" ]; then
+        root_directories+=("$dir")
+    else
+        echo "Note: Directory '$dir' not found in project root"
+    fi
+done
+all_directories=("${src_directories[@]}" "${root_directories[@]}")
 echo "All available directories: ${all_directories[*]}"
 
-# Function to display menu and get user selection
-select_directories() {
-  local options=("All" "${all_directories[@]}" "Done")
+select_subdirectories() {
+  local parent_dir="$1"
+  local subdirs=($(find "$parent_dir" -maxdepth 1 -type d -not -name "$(basename "$parent_dir")" -printf "%P\n"))
+  local options=("All" "${subdirs[@]}" "Finish selection" "Exit script")
   local selected=()
   local choice
 
+  echo "Select subdirectories of $parent_dir to process:"
   while true; do
-    echo "Select directories to process (or 'All' for all directories):"
     select choice in "${options[@]}"; do
       case $choice in
         "All")
-          selected=("${all_directories[@]}")
-          return
+          selected=("${subdirs[@]}")
+          return 0
           ;;
-        "Done")
+        "Finish selection")
           if [ ${#selected[@]} -eq 0 ]; then
-            echo "No directories selected. Please select at least one directory."
+            echo "No subdirectories selected. Please select at least one subdirectory or choose 'All'."
           else
-            echo "Selected directories: ${selected[*]}"
-            directories=("${selected[@]}")
-            return
+            echo "Selected subdirectories: ${selected[*]}"
+            return 0
           fi
+          ;;
+        "Exit script")
+          echo "Exiting script."
+          exit 0
           ;;
         *)
           if [[ " ${selected[*]} " =~ " ${choice} " ]]; then
@@ -67,8 +74,62 @@ select_directories() {
   done
 }
 
+select_directories() {
+  local options=("All" "${all_directories[@]}" "Finish selection" "Exit script")
+  local selected=()
+  local choice
+
+  while true; do
+    echo "Select directories to process (or 'All' for all directories):"
+    select choice in "${options[@]}"; do
+      case $choice in
+        "All")
+          selected=("${all_directories[@]}")
+          directories=("${selected[@]}")
+          return 0
+          ;;
+        "Finish selection")
+          if [ ${#selected[@]} -eq 0 ]; then
+            echo "No directories selected. Please select at least one directory or choose 'All'."
+          else
+            echo "Selected directories: ${selected[*]}"
+            directories=("${selected[@]}")
+            return 0
+          fi
+          ;;
+        "Exit script")
+          echo "Exiting script."
+          exit 0
+          ;;
+        *)
+          if [[ "$choice" == "src/components" ]]; then
+            local component_subdirs=()
+            if ! select_subdirectories "${project_dir}/$choice"; then
+              return 1
+            fi
+            for subdir in "${selected[@]}"; do
+              component_subdirs+=("$choice/$subdir")
+            done
+            selected+=("${component_subdirs[@]}")
+          elif [[ " ${selected[*]} " =~ " ${choice} " ]]; then
+            selected=(${selected[@]/$choice})
+            echo "Removed $choice"
+          else
+            selected+=("$choice")
+            echo "Added $choice"
+          fi
+          ;;
+      esac
+      break
+    done
+  done
+}
+
 # Call the function to select directories
-select_directories
+if ! select_directories; then
+  echo "Script terminated."
+  exit 1
+fi
 
 # List of file types to ignore
 ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.jsx" "*.pdf" "*.csv")
@@ -89,7 +150,6 @@ read_files() {
   for entry in "$dir"/*
   do
     if [ -d "$entry" ]; then
-        # If entry is a directory, call this function recursively
         read_files "$entry"
     elif [ -f "$entry" ]; then
       should_ignore=false
@@ -126,15 +186,18 @@ read_files() {
   done
 }
 
-# Call the recursive function for each specified directory in the project directory
+# Process each selected directory
 for dir in "${directories[@]}"; do
-  full_dir="${project_dir}/src/${dir}"
-  if [ -d "$full_dir" ]; then
-    echo "Processing directory: src/${dir}"
-    read_files "$full_dir"
-  else
-    echo "Directory not found: src/${dir}"
-  fi
+    full_dir="${project_dir}/${dir}"
+    echo "Checking directory: ${full_dir}"
+    if [ -d "$full_dir" ]; then
+        echo "Processing directory: ${dir}"
+        read_files "$full_dir"
+    else
+        echo "Directory not found: ${dir}"
+        echo "Contents of ${project_dir}:"
+        ls -la "${project_dir}"
+    fi
 done
 
 echo "Script execution completed"
