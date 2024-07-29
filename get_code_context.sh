@@ -5,9 +5,6 @@
 # run the command chmod +x get_code_context.sh
 # then run ./code_context.sh
 
-# Enable debugging
-set -x
-
 # Use the current directory as the project directory
 project_dir=$(pwd)
 echo "Project directory: $project_dir"
@@ -28,12 +25,53 @@ if [ ! -d "${project_dir}/src" ]; then
   exit 1
 fi
 
-# Get all directories in src, excluding specific ones
-directories=($(find src -maxdepth 1 -type d -not -name "assets" -not -name "data" -not -name "helpers" -not -name "icons" -not -name "static" -not -name "src" -not -name "lib" -not -name "schemas" -printf "%P\n"))
-echo "Directories to search: ${directories[*]}"
+# Get all directories in src
+all_directories=($(find src -maxdepth 1 -type d -not -name "src" -printf "%P\n"))
+echo "All available directories: ${all_directories[*]}"
+
+# Function to display menu and get user selection
+select_directories() {
+  local options=("All" "${all_directories[@]}" "Done")
+  local selected=()
+  local choice
+
+  while true; do
+    echo "Select directories to process (or 'All' for all directories):"
+    select choice in "${options[@]}"; do
+      case $choice in
+        "All")
+          selected=("${all_directories[@]}")
+          return
+          ;;
+        "Done")
+          if [ ${#selected[@]} -eq 0 ]; then
+            echo "No directories selected. Please select at least one directory."
+          else
+            echo "Selected directories: ${selected[*]}"
+            directories=("${selected[@]}")
+            return
+          fi
+          ;;
+        *)
+          if [[ " ${selected[*]} " =~ " ${choice} " ]]; then
+            selected=(${selected[@]/$choice})
+            echo "Removed $choice"
+          else
+            selected+=("$choice")
+            echo "Added $choice"
+          fi
+          ;;
+      esac
+      break
+    done
+  done
+}
+
+# Call the function to select directories
+select_directories
 
 # List of file types to ignore
-ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.jsx")
+ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.jsx" "*.pdf" "*.csv")
 echo "File types to ignore: ${ignore_files[*]}"
 
 # Specific files to ignore
