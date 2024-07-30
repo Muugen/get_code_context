@@ -3,19 +3,29 @@
 # This works for next.js projects currently
 # Put this in your root folder of your project
 # run the command chmod +x get_code_context.sh
-# then run ./code_context.sh
+# then run ./get_code_context.sh
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
 
 # Use the current directory as the project directory
 project_dir=$(pwd)
-echo "Project directory: $project_dir"
+echo -e "${BLUE}Project directory:${NC} $project_dir"
 
 # Use a fixed name for the output file in the current directory
 output_file="${project_dir}/code_context.txt"
-echo "Output file: $output_file"
+echo -e "${BLUE}Output file:${NC} $output_file"
 
 # Check if the output file exists and remove it if it does
 if [ -f "$output_file" ]; then
-  echo "Removing existing output file"
+  echo -e "${YELLOW}Removing existing output file${NC}"
   rm "$output_file"
 fi
 
@@ -26,11 +36,19 @@ for dir in "public" "posts" "lancement" "lancements"; do
     if [ -d "$project_dir/$dir" ]; then
         root_directories+=("$dir")
     else
-        echo "Note: Directory '$dir' not found in project root"
+        echo -e "${YELLOW}Note: Directory '$dir' not found in project root${NC}"
     fi
 done
 all_directories=("${src_directories[@]}" "${root_directories[@]}")
-echo "All available directories: ${all_directories[*]}"
+echo -e "${BLUE}All available directories:${NC} ${all_directories[*]}"
+
+# Function to display menu with highlighted numbers
+display_menu() {
+    local options=("$@")
+    for i in "${!options[@]}"; do
+        printf "${WHITE}%3d)${NC} %s\n" $((i+1)) "${options[i]}"
+    done
+}
 
 select_subdirectories() {
   local parent_dir="$1"
@@ -39,9 +57,12 @@ select_subdirectories() {
   local selected=()
   local choice
 
-  echo "Select subdirectories of $parent_dir to process:"
+  echo -e "${CYAN}Select subdirectories of $parent_dir to process:${NC}"
   while true; do
-    select choice in "${options[@]}"; do
+    display_menu "${options[@]}"
+    read -p "Enter your choice: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+      choice="${options[$((choice-1))]}"
       case $choice in
         "All")
           selected=("${subdirs[@]}")
@@ -49,28 +70,29 @@ select_subdirectories() {
           ;;
         "Finish selection")
           if [ ${#selected[@]} -eq 0 ]; then
-            echo "No subdirectories selected. Please select at least one subdirectory or choose 'All'."
+            echo -e "${YELLOW}No subdirectories selected. Please select at least one subdirectory or choose 'All'.${NC}"
           else
-            echo "Selected subdirectories: ${selected[*]}"
+            echo -e "${GREEN}Selected subdirectories: ${selected[*]}${NC}"
             return 0
           fi
           ;;
         "Exit script")
-          echo "Exiting script."
+          echo -e "${RED}Exiting script.${NC}"
           exit 0
           ;;
         *)
           if [[ " ${selected[*]} " =~ " ${choice} " ]]; then
             selected=(${selected[@]/$choice})
-            echo "Removed $choice"
+            echo -e "${YELLOW}Removed $choice${NC}"
           else
             selected+=("$choice")
-            echo "Added $choice"
+            echo -e "${GREEN}Added $choice${NC}"
           fi
           ;;
       esac
-      break
-    done
+    else
+      echo -e "${RED}Invalid choice. Please try again.${NC}"
+    fi
   done
 }
 
@@ -80,8 +102,11 @@ select_directories() {
   local choice
 
   while true; do
-    echo "Select directories to process (or 'All' for all directories):"
-    select choice in "${options[@]}"; do
+    echo -e "${CYAN}Select directories to process (or 'All' for all directories):${NC}"
+    display_menu "${options[@]}"
+    read -p "Enter your choice: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+      choice="${options[$((choice-1))]}"
       case $choice in
         "All")
           selected=("${all_directories[@]}")
@@ -90,15 +115,15 @@ select_directories() {
           ;;
         "Finish selection")
           if [ ${#selected[@]} -eq 0 ]; then
-            echo "No directories selected. Please select at least one directory or choose 'All'."
+            echo -e "${YELLOW}No directories selected. Please select at least one directory or choose 'All'.${NC}"
           else
-            echo "Selected directories: ${selected[*]}"
+            echo -e "${GREEN}Selected directories: ${selected[*]}${NC}"
             directories=("${selected[@]}")
             return 0
           fi
           ;;
         "Exit script")
-          echo "Exiting script."
+          echo -e "${RED}Exiting script.${NC}"
           exit 0
           ;;
         *)
@@ -113,27 +138,28 @@ select_directories() {
             selected+=("${component_subdirs[@]}")
           elif [[ " ${selected[*]} " =~ " ${choice} " ]]; then
             selected=(${selected[@]/$choice})
-            echo "Removed $choice"
+            echo -e "${YELLOW}Removed $choice${NC}"
           else
             selected+=("$choice")
-            echo "Added $choice"
+            echo -e "${GREEN}Added $choice${NC}"
           fi
           ;;
       esac
-      break
-    done
+    else
+      echo -e "${RED}Invalid choice. Please try again.${NC}"
+    fi
   done
 }
 
 # Call the function to select directories
 if ! select_directories; then
-  echo "Script terminated."
+  echo -e "${RED}Script terminated.${NC}"
   exit 1
 fi
 
 # List of file types to ignore
 ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.jsx" "*.pdf" "*.csv")
-echo "File types to ignore: ${ignore_files[*]}"
+echo -e "${BLUE}File types to ignore:${NC} ${ignore_files[*]}"
 
 # Specific files to ignore
 specific_ignore_files=(
@@ -141,12 +167,12 @@ specific_ignore_files=(
   "src/components/ui/dropdown-menu.tsx"
   "src/app/(pages)/cgu/page.tsx"
 )
-echo "Specific files to ignore: ${specific_ignore_files[*]}"
+echo -e "${BLUE}Specific files to ignore:${NC} ${specific_ignore_files[*]}"
 
 # Recursive function to read files and append their content
 read_files() {
   local dir="$1"
-  echo "Searching directory: $dir"
+  echo -e "${CYAN}Searching directory: $dir${NC}"
   for entry in "$dir"/*
   do
     if [ -d "$entry" ]; then
@@ -159,7 +185,7 @@ read_files() {
       for specific_file in "${specific_ignore_files[@]}"; do
         if [[ "$relative_path" == "$specific_file" ]]; then
           should_ignore=true
-          echo "Ignoring specific file: $relative_path"
+          echo -e "${YELLOW}Ignoring specific file: $relative_path${NC}"
           break
         fi
       done
@@ -169,7 +195,7 @@ read_files() {
         for ignore_pattern in "${ignore_files[@]}"; do
           if [[ "$entry" == $ignore_pattern ]]; then
             should_ignore=true
-            echo "Ignoring file: $entry"
+            echo -e "${YELLOW}Ignoring file: $entry${NC}"
             break
           fi
         done
@@ -177,7 +203,7 @@ read_files() {
 
       # If the file should not be ignored, append its relative path and content to the output file
       if ! $should_ignore; then
-        echo "Processing file: $relative_path"
+        echo -e "${GREEN}Processing file: $relative_path${NC}"
         echo "// File: $relative_path" >> "$output_file"
         cat "$entry" >> "$output_file"
         echo "" >> "$output_file"
@@ -188,19 +214,21 @@ read_files() {
 
 # Process each selected directory
 for dir in "${directories[@]}"; do
+    # Correct the directory name if it's the lancement subdirectory
+    if [[ "$dir" == "src/components/lancements" ]]; then
+        dir="src/components/lancement"
+    fi
+    
     full_dir="${project_dir}/${dir}"
-    echo "Checking directory: ${full_dir}"
+    echo -e "${CYAN}Checking directory: ${full_dir}${NC}"
     if [ -d "$full_dir" ]; then
-        echo "Processing directory: ${dir}"
+        echo -e "${GREEN}Processing directory: ${dir}${NC}"
         read_files "$full_dir"
     else
-        echo "Directory not found: ${dir}"
-        echo "Contents of ${project_dir}:"
-        ls -la "${project_dir}"
+        echo -e "${RED}Directory not found: ${dir}${NC}"
+        echo -e "${YELLOW}Contents of ${project_dir}/src/components:${NC}"
+        ls -la "${project_dir}/src/components"
     fi
 done
 
-echo "Script execution completed"
-
-# Disable debugging
-set +x
+echo -e "${MAGENTA}Script execution completed${NC}"
