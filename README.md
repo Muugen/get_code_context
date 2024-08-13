@@ -7,42 +7,9 @@ This is a script to get code context:
 This is a script to get the word count of the output file:
 `word_char_count.sh`
 
-# prerequirement
-Install `jq` in your system :
-
-```bash
-sudo apt-get update
-sudo apt-get install jq
-```
-
-## Put this in your root folder of your project
-## Configuration file
-### Edit the `project_config.json`
-
-```json
-{
-  "root_directories": [],
-  "ignore_patterns": [
-    "*.ico",
-    "*.png",
-    "*.jpg",
-    "*.jpeg",
-    "*.gif",
-    "*.svg",
-    "*.zip",
-    "*.pdf",
-    "*.min.js"
-  ],
-  "specific_ignore_files": [],
-  "output_format": "txt",
-  "output_file": "get_code_context.txt"
-}
-```
-
 ### Add scripts & output to `.gitignore` file
 
 ```bash
-project_config.json
 code_context.sh
 word_char_count.sh
 get_code_context.txt
