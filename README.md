@@ -2,7 +2,7 @@
 ## This works for next.js projects currently
 
 This is a script to get code context:
-`get_code_cotext.sh`
+`get_code_context.sh`
 
 This is a script to get the word count of the output file:
 `word_char_count.sh`
@@ -10,7 +10,7 @@ This is a script to get the word count of the output file:
 ### Add scripts & output to `.gitignore` file
 
 ```bash
-code_context.sh
+get_code_context.sh
 word_char_count.sh
 get_code_context.txt
 words_and_characters_count.txt
@@ -21,13 +21,13 @@ words_and_characters_count.txt
 ### before running :
 
 ```bash
-chmod +x code_context.sh && chmod +x word_char_count.sh
+chmod +x get_code_context.sh && chmod +x word_char_count.sh
 ```
 
 ### To run
 
 ```bash
-./code_context.sh
+./get_code_context.sh
 ```
 
 ```bash
