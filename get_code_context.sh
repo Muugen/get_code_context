@@ -20,7 +20,7 @@ project_dir=$(pwd)
 echo -e "${BLUE}Project directory:${NC} $project_dir"
 
 # Use a fixed name for the output file in the current directory
-output_file="${project_dir}/code_context.txt"
+output_file="${project_dir}/get_code_context.txt"
 echo -e "${BLUE}Output file:${NC} $output_file"
 
 # Check if the output file exists and remove it if it does
@@ -128,12 +128,16 @@ select_directories() {
           ;;
         *)
           if [[ "$choice" == "src/components" ]]; then
+            selected+=("$choice")  # Add src/components itself
+            echo -e "${GREEN}Added $choice${NC}"
             local component_subdirs=()
             if ! select_subdirectories "${project_dir}/$choice"; then
               return 1
             fi
             for subdir in "${selected[@]}"; do
-              component_subdirs+=("$choice/$subdir")
+              if [[ "$subdir" != "$choice" ]]; then
+                component_subdirs+=("$choice/$subdir")
+              fi
             done
             selected+=("${component_subdirs[@]}")
           elif [[ " ${selected[*]} " =~ " ${choice} " ]]; then
@@ -151,23 +155,15 @@ select_directories() {
   done
 }
 
-# Call the function to select directories
-if ! select_directories; then
-  echo -e "${RED}Script terminated.${NC}"
-  exit 1
-fi
-
 # List of file types to ignore
-ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.jsx" "*.pdf" "*.csv")
+ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.zip" "*.txt" "*.json" "*.css" "*.pdf" "*.PDF" "*.csv")
 echo -e "${BLUE}File types to ignore:${NC} ${ignore_files[*]}"
 
-# Specific files to ignore
+# Specific files and directories to ignore
 specific_ignore_files=(
-  "src/components/ui/Icons.tsx"
-  "src/components/ui/dropdown-menu.tsx"
-  "src/app/(pages)/cgu/page.tsx"
+  # here
 )
-echo -e "${BLUE}Specific files to ignore:${NC} ${specific_ignore_files[*]}"
+echo -e "${BLUE}Specific files and directories to ignore:${NC} ${specific_ignore_files[*]}"
 
 # Recursive function to read files and append their content
 read_files() {
@@ -176,6 +172,12 @@ read_files() {
   for entry in "$dir"/*
   do
     if [ -d "$entry" ]; then
+        # Check if the directory should be ignored
+        relative_dir=${entry#"$project_dir/"}
+        if [[ " ${specific_ignore_files[@]} " =~ " ${relative_dir} " ]]; then
+            echo -e "${YELLOW}Ignoring directory: $relative_dir${NC}"
+            continue
+        fi
         read_files "$entry"
     elif [ -f "$entry" ]; then
       should_ignore=false
@@ -183,9 +185,9 @@ read_files() {
 
       # Check if the file is one of the specific files to ignore
       for specific_file in "${specific_ignore_files[@]}"; do
-        if [[ "$relative_path" == "$specific_file" ]]; then
+        if [[ "$relative_path" == "$specific_file" || "$relative_path" == $specific_file/* ]]; then
           should_ignore=true
-          echo -e "${YELLOW}Ignoring specific file: $relative_path${NC}"
+          echo -e "${YELLOW}Ignoring specific file or directory: $relative_path${NC}"
           break
         fi
       done
@@ -211,6 +213,18 @@ read_files() {
     fi
   done
 }
+
+# Call the function to select directories
+if ! select_directories; then
+  echo -e "${RED}Script terminated.${NC}"
+  exit 1
+fi
+
+# Debug output to verify selected directories
+echo -e "${MAGENTA}Directories to process:${NC}"
+for dir in "${directories[@]}"; do
+  echo -e "${MAGENTA} - $dir${NC}"
+done
 
 # Process each selected directory
 for dir in "${directories[@]}"; do
